@@ -6,6 +6,13 @@ This repo contains the webClient, ImageClassifier, Authentication module, and Im
 
 To get started, read the respective readmes
 
+## Agentic automation module
+
+The new `AgenticOrchestration` package introduces a LangGraph-driven automation stack that links a Hugging Face
+agent with an OpenAI fallback. The primary agent can browse websites via Selenium, analyse the results, and trigger
+deployments through Kubernetes, Terraform, and the AWS CDK. See `AgenticOrchestration/README.md` for detailed
+instructions.
+
 This software is open-sourced under a GNU license.
 
 To start the server: 
