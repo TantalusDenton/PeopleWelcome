@@ -6,6 +6,7 @@ import Login from "./pages/Message/Login"
 import MessagesHome from "./pages/Message/MessagesHome"
 import "./css/style.scss"
 import { firebaseConfig } from './firebase/firebase';
+import ChatHome from './pages/ChatHome';
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 import MyAccount from './pages/MyAccount';
@@ -124,6 +125,10 @@ function App({ signOut }) {
             {/* <Route path='/' element={<HomePage />} /> */}
             <Route path='/'>
               <Route index element={
+              <ProtectedRoute>
+                <ChatHome />
+              </ProtectedRoute>}/>
+              <Route path='feed' element={
               <ProtectedRoute>
                 <HomePage />
               </ProtectedRoute>}/>

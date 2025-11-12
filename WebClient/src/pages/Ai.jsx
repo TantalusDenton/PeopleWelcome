@@ -1,41 +1,64 @@
-import React, { useContext, useState, useEffect } from "react"
-import CurrentAiContext from "../components/CurrentAiContext"
-import { Avatar, IconButton } from '@mui/material';
-import { cyan } from '@mui/material/colors';
+import React, { useContext, useEffect, useState } from "react";
+import { Avatar } from "@mui/material";
+import { cyan } from "@mui/material/colors";
 
-function Ai(props) {
-    const id = props.value.image_id
-    const name = props.value.ai_name
-    const { currentAi, setCurrentAi } = useContext(CurrentAiContext)
-    const onClickAi = () => {
-        setCurrentAi(name)
-        console.log(`currentAi: ${currentAi}`)
+import CurrentAiContext from "../components/CurrentAiContext";
+
+function Ai({ value }) {
+  const imageId = value.image_id;
+  const name = value.ai_name || value.name || value;
+  const { currentAi, setCurrentAi } = useContext(CurrentAiContext);
+  const [imageUrl, setImageUrl] = useState(undefined);
+  const isActive = currentAi === name;
+
+  useEffect(() => {
+    if (!imageId) {
+      return;
     }
-    const [img, setImg] = useState(undefined)
-
-    useEffect(() => {
-        const imageUrl = `/images/${id}`
-        const fetchImage = async () => {
-          const image = await fetch(imageUrl)
-          const imageBlob = await image.blob()
-          const imageObjectURL = URL.createObjectURL(imageBlob);
-          setImg(imageObjectURL);
+    const controller = new AbortController();
+    let objectUrl;
+    const loadImage = async () => {
+      try {
+        const response = await fetch(`/images/${imageId}`, {
+          signal: controller.signal,
+        });
+        if (!response.ok) {
+          return;
         }
-        if(id) {
-            fetchImage()
-        }
-      }, [])
+        const blob = await response.blob();
+        objectUrl = URL.createObjectURL(blob);
+        setImageUrl(objectUrl);
+      } catch {
+        // Fail silently; avatar fallback will be used.
+      }
+    };
+    loadImage();
+    return () => {
+      controller.abort();
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl);
+      }
+    };
+  }, [imageId]);
 
-    return(
-        <div className="ai">
-            <button onClick={onClickAi}>
-                {/* <img src={props}/>     */}
-                
-                <Avatar sx={{ bgcolor: cyan[500] }} aria-label="avatar"></Avatar>
-            </button>
-            <h3>{name}</h3>
-        </div>
-    )
+  const onClickAi = () => {
+    setCurrentAi(name);
+  };
+
+  return (
+    <div className={`ai ${isActive ? "ai--active" : ""}`}>
+      <button type="button" onClick={onClickAi} className="ai__button">
+        <Avatar
+          src={imageUrl}
+          alt={name}
+          sx={{ bgcolor: cyan[500] }}
+          aria-label={`${name} avatar`}
+          className={isActive ? "ai__avatar--active" : ""}
+        />
+      </button>
+      <h3>{name}</h3>
+    </div>
+  );
 }
 
-export default Ai
+export default Ai;

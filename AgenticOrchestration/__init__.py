@@ -1,17 +1,29 @@
-"""Agentic orchestration package linking a Hugging Face LangGraph agent to an OpenAI agent."""
+"""Agentic orchestration package powered by LangChain and the OpenAI API."""
 
 from .orchestrator import AgenticOrchestrator
-from .huggingface_agent import HuggingFaceAgent
 from .openai_agent import OpenAIAgent
-from .toolkit import AgentTooling, SeleniumTool, KubernetesTool, TerraformTool, AwsCdkTool
+from .toolkit import (
+    AgentTooling,
+    AwsCdkTool,
+    ImageTagRag,
+    KubernetesInstallTool,
+    KubernetesTool,
+    SeleniumTool,
+    TerraformInstallTool,
+    TerraformMicroserviceTool,
+    TerraformTool,
+)
 
 __all__ = [
     "AgenticOrchestrator",
-    "HuggingFaceAgent",
     "OpenAIAgent",
     "AgentTooling",
     "SeleniumTool",
     "KubernetesTool",
+    "KubernetesInstallTool",
     "TerraformTool",
+    "TerraformMicroserviceTool",
+    "TerraformInstallTool",
     "AwsCdkTool",
+    "ImageTagRag",
 ]

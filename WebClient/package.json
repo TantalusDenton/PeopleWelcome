@@ -19,6 +19,7 @@
     "aws-amplify": "^5.0.15",
     "aws-sdk": "^2.1318.0",
     "axios": "^1.2.2",
+    "better-sqlite3": "^9.0.0",
     "core-js": "^3.26.1",
     "cors": "^2.8.5",
     "dotenv": "^8.2.0",
