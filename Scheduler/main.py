@@ -21,7 +21,7 @@ from AgenticOrchestration import (
     TerraformInstallTool,
     TerraformMicroserviceTool,
 )
-import trainingQueue
+from . import trainingQueue
 
 BASE_DIR = Path(__file__).resolve().parents[1]
 ENV_PATHS = [

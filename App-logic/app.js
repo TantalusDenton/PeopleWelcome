@@ -12,20 +12,19 @@ const express = require('express')
 const app = express()
 const PORT = 5000
 
-var http = require('http');
-var https = require('https');
-
-var privateKey = fs.readFileSync('sslcert/privkey.pem', 'utf8');
-var certificate = fs.readFileSync('sslcert/fullchain.pem','utf8');
-
-var credentials = {key: privateKey, cert: certificate};
-
 const LOCAL_STORAGE_ROOT = path.join(__dirname, 'local_storage')
+const TEMP_UPLOAD_DIR = path.join(LOCAL_STORAGE_ROOT, 'tmp')
 const UPLOAD_DIR = path.join(LOCAL_STORAGE_ROOT, 'uploads')
 const TREE_DIR = path.join(LOCAL_STORAGE_ROOT, 'trees')
-const TEMP_UPLOAD_DIR = path.join(LOCAL_STORAGE_ROOT, 'tmp')
 
-[UPLOAD_DIR, TREE_DIR, TEMP_UPLOAD_DIR].forEach((dir) => {
+const STORAGE_DIRECTORIES = [
+    LOCAL_STORAGE_ROOT,
+    TEMP_UPLOAD_DIR,
+    UPLOAD_DIR,
+    TREE_DIR,
+]
+
+STORAGE_DIRECTORIES.forEach((dir) => {
     fs.mkdirSync(dir, { recursive: true })
 })
 
@@ -566,13 +565,6 @@ app.delete('/account/:user/deletepost', deletePost, (req, res) => {
 //
 // DynamoDB api end
 //
-/*
 app.listen(PORT, () => {
     console.log(`server is listening on port ${PORT}`)
 })
-*/
-var httpServer = http.createServer(app);
-var httpsServer = https.createServer(credentials, app);
-
-httpServer.listen(8080);
-httpsServer.listen(PORT);

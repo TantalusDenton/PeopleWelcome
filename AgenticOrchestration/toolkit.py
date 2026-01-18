@@ -600,11 +600,15 @@ class ImageTagRag:
         payload = {"image_id": image_id, "tags": tags}
         if metadata:
             payload.update(metadata)
+        safe_metadata = dict(payload)
+        tags_value = safe_metadata.get("tags")
+        if isinstance(tags_value, list):
+            safe_metadata["tags"] = ",".join(tags_value)
         try:
             self._vectorstore.delete(ids=[image_id])
         except Exception:
             pass
-        self._vectorstore.add_texts([document], metadatas=[payload], ids=[image_id])
+        self._vectorstore.add_texts([document], metadatas=[safe_metadata], ids=[image_id])
         self._vectorstore.persist()
         return payload
 
@@ -612,9 +616,11 @@ class ImageTagRag:
         data = self._vectorstore._collection.get(where={"image_id": image_id})
         if data.get("ids"):
             meta = data["metadatas"][0]
+            tags_field = meta.get("tags", "")
+            tag_list = [tag.strip() for tag in tags_field.split(",") if tag.strip()]
             return {
                 "image_id": image_id,
-                "tags": meta.get("tags", []),
+                "tags": tag_list,
                 "metadata": meta,
             }
         return {"image_id": image_id, "tags": [], "message": "No tags found for the requested image."}

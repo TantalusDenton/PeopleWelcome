@@ -12,7 +12,7 @@ from langchain.agents import AgentExecutor, create_openai_tools_agent
 from langchain.tools import StructuredTool
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_core.pydantic_v1 import BaseModel, Field
+from langchain_core.pydantic_v1 import BaseModel, Field, conint, confloat
 from langchain_core.runnables import RunnableConfig
 from langchain_openai import ChatOpenAI
 
@@ -26,12 +26,12 @@ class MicroserviceDeploymentInput(BaseModel):
     dockerfile_path: str = Field(..., description="Path to the Dockerfile that builds the container image.")
     target: str = Field(..., description="Deployment target. Use 'kubernetes' for local clusters or 'aws' for CDK.")
     port: int = Field(..., description="Container port exposed by the service.")
-    replicas: int = Field(1, ge=1, description="Desired number of replicas.")
+    replicas: conint(ge=1) = Field(1, description="Desired number of replicas.")
     image: Optional[str] = Field(None, description="Pre-built container image to deploy. Defaults to <name>:latest.")
     namespace: Optional[str] = Field(None, description="Kubernetes namespace override for local deployments.")
     environment: Dict[str, str] = Field(default_factory=dict, description="Environment variables for the container.")
-    cpu: int = Field(512, description="CPU units requested for AWS Fargate deployments.")
-    memory_mib: int = Field(1024, description="Memory (MiB) requested for AWS Fargate deployments.")
+    cpu: conint(ge=1) = Field(512, description="CPU units requested for AWS Fargate deployments.")
+    memory_mib: conint(ge=1) = Field(1024, description="Memory (MiB) requested for AWS Fargate deployments.")
     aws_region: Optional[str] = Field(None, description="AWS region override when deploying via CDK.")
     stack_name: Optional[str] = Field(None, description="Optional stack name for AWS CDK deployments.")
     apply: bool = Field(False, description="If true run terraform apply or cdk deploy. Defaults to plan/synth only.")
@@ -61,7 +61,7 @@ class ImageTagQueryInput(BaseModel):
         None,
         description="Optional natural language question to retrieve similar tagged images.",
     )
-    top_k: int = Field(1, ge=1, le=10, description="How many related images to retrieve when asking a question.")
+    top_k: conint(ge=1, le=10) = Field(1, description="How many related images to retrieve when asking a question.")
 
 
 class OpenAIAgent:
