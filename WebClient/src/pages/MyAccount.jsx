@@ -6,47 +6,13 @@ import React, { useState, useEffect, useContext } from 'react'
 // import useQuery from './hooks/useQuery';
 
 import ImageUploads from "./ImageUploads";
-import { Grid } from "@material-ui/core";
-import { makeStyles } from "@material-ui/core/styles";
+import { Grid } from "@mui/material";
 import Post from './Post';
 import TagsInput from "../components/TagsInput";
 import { AuthContext } from "../context/AuthContext";
 import CurrentAiContext from "../components/CurrentAiContext";
 
-const useStyles = makeStyles({
-  gridContainer: {
-    paddingLeft: "40px",
-    paddingRight: "40px"
-  },
-  root: {
-    minWidth: 200
-  },
-  bullet: {
-    display: "inline-block",
-    margin: "0 2px",
-    transform: "scale(0.8)"
-  },
-  title: {
-    fontSize: 14
-  },
-  pos: {
-    marginBottom: 12
-  },
-  media: {
-    height: 0,
-    paddingTop: '56.25%', // 16:9,
-    marginTop: '30',
-    // borderRadius: '12px'
-  },
-  field: {
-    marginTop: 20,
-    marginBottom: 20,
-    display: 'block'
-  }
-});
-
 export default function MyAccount() {
-  const classes = useStyles();
   const navigate = useNavigate(); 
 
   // a local state to store the currently selected file.
@@ -149,7 +115,7 @@ export default function MyAccount() {
       <Grid
         container
         spacing={7}
-        className={classes.gridContainer}
+        sx={{ px: '40px' }}
         justifyContent="center"
       >
         {posts.map((post, index) => {

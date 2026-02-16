@@ -1,10 +1,6 @@
 import { React, useState, useContext, useEffect } from "react";
-import { makeStyles } from "@material-ui/core/styles";
-import Card from "@material-ui/core/Card";
 import CurrentAiContext from "../components/CurrentAiContext";
-import { CardActions, CardContent, Typography, CardMedia, Grid } from "@material-ui/core";
-import { Avatar, IconButton } from '@mui/material';
-import CardHeader from '@material-ui/core/CardHeader';
+import { Avatar, Card, CardActions, CardHeader, CardMedia, Grid, IconButton } from '@mui/material';
 
 import { cyan } from '@mui/material/colors';
 import ShareIcon from '@mui/icons-material/Share';
@@ -20,36 +16,7 @@ import { AuthContext } from "../context/AuthContext";
 // import TextField from '@mui/material/TextField';
 // import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
 
-const useStyles = makeStyles({
-  root: {
-    minWidth: 400
-  },
-  bullet: {
-    display: "inline-block",
-    margin: "0 2px",
-    transform: "scale(0.8)"
-  },
-  title: {
-    fontSize: 14
-  },
-  pos: {
-    marginBottom: 12
-  },
-  media: {
-    height: 0,
-    paddingTop: '100%', // 1:1, (second number / first number) * 100 = 100%
-    marginTop: '30',
-    // borderRadius: '12px'
-  },
-  field: {
-    marginTop: 20,
-    marginBottom: 20,
-    display: 'block'
-  }
-});
-
 export default function ImageUploads(props, socket, user, post) {
-  const classes = useStyles();
   // const bull = <span className={classes.bullet}>•</span>;
   const currentAi = useContext(CurrentAiContext).currentAi
   const { currentUser } = useContext(AuthContext)
@@ -213,7 +180,7 @@ export default function ImageUploads(props, socket, user, post) {
   }, [currentAi])
 
   return (
-    <Card className={classes.root} variant="outlined">
+    <Card variant="outlined" sx={{ minWidth: 400 }}>
       <CardHeader
         avatar={
           <Avatar sx={{ bgcolor: cyan[500] }} aria-label="avatar"></Avatar>
@@ -228,10 +195,10 @@ export default function ImageUploads(props, socket, user, post) {
         subheader={date}
       />
       <CardMedia
-        className={[classes.media, 'photo']}
+        className="photo"
         image={imageUrl} // require image
         title=""
-        style={useStyles.media} // specify styles
+        sx={{ pt: "100%", mt: "30px" }} // specify styles
       >
         <div className='overlay'>
           <input type="text" id="tagbox" placeholder="Add a tag..." onChange={onTagTextChange} value={message}/>
@@ -240,7 +207,7 @@ export default function ImageUploads(props, socket, user, post) {
           <Grid
             container
             spacing={7}
-            className={classes.gridContainer}
+            sx={{ px: "40px" }}
             justifyContent="center"
           >
             {tags.map((tag, index) => {
@@ -257,7 +224,7 @@ export default function ImageUploads(props, socket, user, post) {
             id="suggestions"
             container
             spacing={7}
-            className={classes.gridContainer}
+            sx={{ px: "40px" }}
             justifyContent="center"
           >
             {suggestions.map((tag, index) => {
