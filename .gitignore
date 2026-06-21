@@ -1,0 +1,5 @@
+AgenticOrchestration/.venv
+App-logic/local_storage/
+App-logic/sslcert/
+*.db
+App-logic/node_modules/

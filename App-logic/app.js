@@ -6,59 +6,45 @@ const cors = require('cors')
 require('dotenv').config()
 const uuid = require('uuid').v4
 const fs = require('fs')
-const FormData = require('form-data');
 
-const { S3 } = require('@aws-sdk/client-s3')
 const express = require('express')
 
 const app = express()
 const PORT = 5000
 
-var http = require('http');
-var https = require('https');
+const LOCAL_STORAGE_ROOT = path.join(__dirname, 'local_storage')
+const TEMP_UPLOAD_DIR = path.join(LOCAL_STORAGE_ROOT, 'tmp')
+const UPLOAD_DIR = path.join(LOCAL_STORAGE_ROOT, 'uploads')
+const TREE_DIR = path.join(LOCAL_STORAGE_ROOT, 'trees')
 
-var privateKey = fs.readFileSync('sslcert/privkey.pem', 'utf8');
-var certificate = fs.readFileSync('sslcert/fullchain.pem','utf8');
+const STORAGE_DIRECTORIES = [
+    LOCAL_STORAGE_ROOT,
+    TEMP_UPLOAD_DIR,
+    UPLOAD_DIR,
+    TREE_DIR,
+]
 
-var credentials = {key: privateKey, cert: certificate};
+STORAGE_DIRECTORIES.forEach((dir) => {
+    fs.mkdirSync(dir, { recursive: true })
+})
 
-//
-// S3 Upload Functionality begin
-//
-
-const s3Client = new S3({ region: process.env.BUCKET_REGION,
-credentials: {
-  accessKeyId: process.env.ACCESS_KEY,
-  secretAccessKey: process.env.SECRET_ACCESS_KEY
-}})
-
-
-//const s3Router = express.Router()
-//app.use('/s3', s3Router)
 app.use('/upload', (error, req, res, next) => {
     if (error instanceof multer.MulterError) {
         if (error.code === "LIMIT_FILE_SIZE") {
-            return res.status(400).json({
-                message: "file is too large",
-            });
+            return res.status(400).json({ message: "file is too large" });
         }
-  
         if (error.code === "LIMIT_FILE_COUNT") {
-            return res.status(400).json({
-                message: "File limit reached",
-            });
+            return res.status(400).json({ message: "File limit reached" });
         }
-  
         if (error.code === "LIMIT_UNEXPECTED_FILE") {
-            return res.status(400).json({
-                message: "File must be an image",
-            });
+            return res.status(400).json({ message: "File must be an image" });
         }
     }
+    next()
 })
 const corsOptions = {
     origin:'*', 
-    credentials:true,            //access-control-allow-credentials:true
+    credentials:true,
     optionSuccessStatus:200,
 }
 app.use(cors(corsOptions))
@@ -80,29 +66,38 @@ const authorize = require('./authorize')
 //app.use(authorize)
 
 
-// upload file to s3 bucket with given key
+const moveFile = async (sourcePath, destinationPath) => {
+    await fs.promises.mkdir(path.dirname(destinationPath), { recursive: true })
+    await fs.promises.rename(sourcePath, destinationPath)
+}
+
 const uploadImage = async (file, key) => {
-    const fileStream = fs.createReadStream(file.path)
-  
-    const uploadParams = {
-        Bucket: process.env.BUCKET_NAME,
-        Body: fileStream,
-        Key: key
-    }
-  
-    return await s3Client.putObject(uploadParams)
+    const destination = path.join(UPLOAD_DIR, key)
+    await moveFile(file.path, destination)
+    return destination
 }
 
-// download an image from s3
 const getFileStream = async fileKey => {
-    const downloadParams = {
-        Key: fileKey,
-        Bucket: process.env.BUCKET_NAME
+    const uploadPath = path.join(UPLOAD_DIR, fileKey)
+    if (fs.existsSync(uploadPath)) {
+        return fs.createReadStream(uploadPath)
     }
-
-    return await s3Client.getObject(downloadParams)
+    const treePath = path.join(TREE_DIR, `${fileKey}.json`)
+    if (fs.existsSync(treePath)) {
+        return fs.createReadStream(treePath)
+    }
+    throw new Error('File not found')
 }
-   
+
+const saveTreeFile = async (aiId, payload) => {
+    const buffer = Buffer.isBuffer(payload) ? payload : Buffer.from(
+        typeof payload === 'string' ? payload : JSON.stringify(payload ?? {}), 'utf-8',
+    )
+    const destination = path.join(TREE_DIR, `${aiId}.json`)
+    await fs.promises.mkdir(path.dirname(destination), { recursive: true })
+    await fs.promises.writeFile(destination, buffer)
+    return destination
+}
 
 const fileFilter = (req, file, cb) => {
     if (file.mimetype.split('/')[0] === 'image') {
@@ -112,11 +107,7 @@ const fileFilter = (req, file, cb) => {
     }
   }
 
-const upload = multer({ dest: 'uploads/' })
-  
-//
-// S3 Upload Functionality end
-//
+const upload = multer({ dest: TEMP_UPLOAD_DIR })
 
 //
 // DynamoDB api begin
@@ -129,17 +120,18 @@ const getPostsByUser = async (req, res, next) => {
     if (origin === 'http://localhost:3000') {
         res.setHeader('Access-Control-Allow-Origin', origin);
     }
-    let posts
+    let posts = []
     try {
         const user = req.params.user
         posts = await dynamoRepo.dynamo.retrievePostsOfUser(user)
     } catch(e) {
-        res.status(400).send(e)
+        return res.status(400).send(e)
     }
-    // add posts object to request so it can be used
-    const items = posts.Items
+    const items = Array.isArray(posts?.Items) ? posts.Items : Array.isArray(posts) ? posts : []
     items.forEach(item => {
-        item.date = removeTagInstancesFromDate(item.date)
+        if (item.date) {
+            item.date = removeTagInstancesFromDate(item.date)
+        }
     })
     req.posts = items
     next()
@@ -151,17 +143,18 @@ const getPostsByAi = async (req, res, next) => {
     if (origin === 'http://localhost:3000') {
         res.setHeader('Access-Control-Allow-Origin', origin);
     }
-    let posts
+    let posts = []
     try {
         const user = req.params.user
         posts = await dynamoRepo.dynamo.retrievePostsOfAi(user, ai)
     } catch(e) {
-        res.status(400).send(e)
+        return res.status(400).send(e)
     }
-    // add posts object to request so it can be used
-    const items = posts.Items
+    const items = Array.isArray(posts?.Items) ? posts.Items : Array.isArray(posts) ? posts : []
     items.forEach(item => {
-        item.date = removeTagInstancesFromDate(item.date)
+        if (item.date) {
+            item.date = removeTagInstancesFromDate(item.date)
+        }
     })
     req.posts = items
     next()
@@ -408,23 +401,35 @@ app.get('/account/:user/ownedais', getAisByUser, (req, res) => {
     res.json(posts)
 })*/
 
-// get an image from s3 bucket by id
+// get an image from local storage by id
 app.get('/images/:key', async (req, res) => {
-    const key = req.params.key
-    const readStream = await getFileStream(key)
-    
-    readStream.Body.pipe(res)
+    try {
+        const key = req.params.key
+        const stream = await getFileStream(key)
+        const ext = path.extname(key)
+        if (ext) {
+            res.type(ext)
+        }
+        stream.on('error', () => res.sendStatus(404))
+        stream.pipe(res)
+    } catch {
+        res.sendStatus(404)
+    }
 })
 
-// get a decision tree from s3 bucket by user and ai
+// get a decision tree from local storage by user and ai
 app.get('/account/:user/:ai/tree', async (req, res) => {
-    const user = req.params.user
-    const ai = req.params.ai
-    const data = await dynamoRepo.dynamo.getAiIdByAiAndUser(user, ai)
-    const aiId = data.ai_id
-
-    const readStream = await getFileStream(aiId)
-    readStream.Body.pipe(res)
+    try {
+        const user = req.params.user
+        const ai = req.params.ai
+        const data = await dynamoRepo.dynamo.getAiIdByAiAndUser(user, ai)
+        const stream = await getFileStream(data.ai_id)
+        res.type('application/json')
+        stream.on('error', () => res.sendStatus(404))
+        stream.pipe(res)
+    } catch {
+        res.sendStatus(404)
+    }
 })
 
 //
@@ -472,14 +477,23 @@ const dynamoRepo = require('./datarepo')
 app.post('/upload/account/:user/createpost', upload.single('file'), async (req, res) => {
     const file = req.file
     const user = req.params.user
+    if (!file) {
+        return res.status(400).json({ error: 'File is required' })
+    }
 
-    const key = uuid()
-    const result = uploadImage(file, key)
+    const extension = path.extname(file.originalname || '').toLowerCase()
+    const key = `${uuid()}${extension}`
 
-    // wait for image to upload, and insert data in DynamoDB if successful
-    result.then(async () => {
+    try {
+        await uploadImage(file, key)
         await dynamoRepo.dynamo.createPostWithoutTags(user, key)
-    })
+        res.status(201).json({ image_id: key })
+    } catch (error) {
+        if (file?.path && fs.existsSync(file.path)) {
+            await fs.promises.unlink(file.path).catch(() => {})
+        }
+        res.status(500).json({ error: error.message })
+    }
 })
 
 // upload file
@@ -490,12 +504,21 @@ app.post('/upload/account/:user/:ai/uploadfile', upload.single('file'), async (r
 
     const data = await dynamoRepo.dynamo.getAiIdByAiAndUser(user, ai)
     const aiId = data.ai_id
-    const result = uploadImage(file, aiId)
+    if (!file) {
+        return res.status(400).json({ error: 'File is required' })
+    }
 
-    // wait for image to upload, and insert data in DynamoDB if successful
-    result.then(async () => {
+    const destination = path.join(TREE_DIR, `${aiId}-upload`)
+    try {
+        await moveFile(file.path, destination)
         await dynamoRepo.dynamo.updateDecisionTree(user, ai, 1)
-    })
+        res.status(200).json({ status: 'ok' })
+    } catch (error) {
+        if (file?.path && fs.existsSync(file.path)) {
+            await fs.promises.unlink(file.path).catch(() => {})
+        }
+        res.status(500).json({ error: error.message })
+    }
 })
 
 // adds decision tree model to s3
@@ -506,20 +529,13 @@ app.post('/upload/account/:user/:ai/updatetree', async (req, res) => {
 
     const data = await dynamoRepo.dynamo.getAiIdByAiAndUser(user, ai)
     const aiId = data.ai_id
-
-    var buf = Buffer.from(JSON.stringify(treeData))
-
-    const uploadParams = {
-        Bucket: process.env.BUCKET_NAME,
-        Body: buf,
-        Key: aiId
+    try {
+        await saveTreeFile(aiId, treeData ?? {})
+        await dynamoRepo.dynamo.updateDecisionTree(user, ai, treeData ?? {})
+        res.status(200).json({ status: 'ok' })
+    } catch (error) {
+        res.status(500).json({ error: error.message })
     }
-  
-    const result = s3Client.putObject(uploadParams)
-
-    result.then(async () => {
-        await dynamoRepo.dynamo.updateDecisionTree(user, ai, 1)
-    })
 })
 
 // creates new tag for this ai in database
@@ -549,13 +565,6 @@ app.delete('/account/:user/deletepost', deletePost, (req, res) => {
 //
 // DynamoDB api end
 //
-/*
 app.listen(PORT, () => {
     console.log(`server is listening on port ${PORT}`)
 })
-*/
-var httpServer = http.createServer(app);
-var httpsServer = https.createServer(credentials, app);
-
-httpServer.listen(8080);
-httpsServer.listen(PORT);
