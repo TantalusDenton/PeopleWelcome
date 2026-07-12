@@ -1,7 +1,5 @@
 import React, { useContext } from 'react';
 import { Link } from 'react-router-dom';
-import { signOut } from 'firebase/auth';
-import { auth } from '../firebase/firebase';
 import { AuthContext } from '../context/AuthContext';
 import { useAppContext, useSidebars, useMode } from '../context/AppContext';
 import logo from '../images/peoplewelcomelogo3.png';
@@ -54,12 +52,11 @@ function ModeToggle() {
 }
 
 function TopNavBar() {
-  const { currentUser } = useContext(AuthContext);
+  const { currentUser, signOut } = useContext(AuthContext);
   const { isMobile, toggleLeftSidebar, toggleRightSidebar } = useSidebars();
 
   const onClickLogout = async () => {
-    signOut(auth);
-    window.location.reload(false);
+    signOut();
   };
 
   return (
@@ -99,6 +96,7 @@ function TopNavBar() {
             {currentUser.displayName}
           </span>
         )}
+        {currentUser && <Link to="/settings" className="topnav__settings-link">Settings</Link>}
 
         {/* Logout button */}
         <button

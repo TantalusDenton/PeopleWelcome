@@ -226,11 +226,6 @@ export function AppContextProvider({ children }) {
     // Check if in inference mode (two AIs selected)
     isInferenceMode: state.mode === 'image' && state.selectedAIs.length === 2,
 
-    // Check if in instruction mode (single owned AI in chat mode)
-    isInstructionMode: state.mode === 'chat' &&
-      state.selectedAIs.length === 1 &&
-      state.selectedAIs[0].isOwned,
-
     // Check if in multi-AI chat mode
     isMultiAIChat: state.mode === 'chat' && state.selectedAIs.length > 1,
 

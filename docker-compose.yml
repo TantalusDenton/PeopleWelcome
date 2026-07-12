@@ -1,0 +1,28 @@
+services:
+  scheduler:
+    build:
+      context: .
+      dockerfile: Scheduler/Dockerfile
+    environment:
+      DATABASE_PATH: /data/peoplewelcome.db
+      CORS_ORIGINS: http://localhost:13000
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+      UNSTOPPABLE_LLM_URL: ${UNSTOPPABLE_LLM_URL:-}
+      UNSTOPPABLE_LLM_API_KEY: ${UNSTOPPABLE_LLM_API_KEY:-}
+    volumes:
+      - peoplewelcome-data:/data
+    ports:
+      - "18000:8000"
+  web:
+    build:
+      context: .
+      dockerfile: WebClient/Dockerfile
+      args:
+        REACT_APP_API_URL: http://localhost:18000
+    depends_on:
+      - scheduler
+    ports:
+      - "13000:80"
+volumes:
+  peoplewelcome-data:

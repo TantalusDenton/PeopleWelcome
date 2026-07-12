@@ -20,7 +20,6 @@ function ChatMode() {
   const {
     primaryAI,
     selectedAIs,
-    isInstructionMode,
     isMultiAIChat,
     hasSelection,
   } = useAppContext();
@@ -39,6 +38,12 @@ function ChatMode() {
       setMessages([]);
     }
   }, [primaryAI?.id, currentUser?.uid]);
+
+  useEffect(() => {
+    const appendMessages = (event) => setMessages(previous => [...previous, ...event.detail]);
+    window.addEventListener('peoplewelcome-chat', appendMessages);
+    return () => window.removeEventListener('peoplewelcome-chat', appendMessages);
+  }, []);
 
   const loadConversationHistory = async () => {
     if (!primaryAI || !currentUser) return;
@@ -74,10 +79,6 @@ function ChatMode() {
       return 'Select an AI to start chatting';
     }
 
-    if (isInstructionMode) {
-      return `Configure ${primaryAI.name}`;
-    }
-
     if (isMultiAIChat) {
       return `Group Chat: ${selectedAIs.map(ai => ai.name).join(', ')}`;
     }
@@ -90,15 +91,11 @@ function ChatMode() {
       return 'Choose an AI from the sidebar to begin';
     }
 
-    if (isInstructionMode) {
-      return 'Set personality and instructions for your AI';
-    }
-
     if (isMultiAIChat) {
       return 'Multiple AIs will discuss and collaborate';
     }
 
-    return primaryAI.system_prompt || 'Ready to assist';
+    return primaryAI.persona || 'Ready to assist';
   };
 
   // No AI selected state
@@ -180,22 +177,6 @@ function ChatMode() {
             </p>
           </div>
 
-          {/* Instruction mode indicator */}
-          {isInstructionMode && (
-            <span
-              style={{
-                marginLeft: 'auto',
-                padding: '0.25rem 0.75rem',
-                background: '#dcfce7',
-                color: '#166534',
-                borderRadius: '999px',
-                fontSize: '0.8rem',
-                fontWeight: 500,
-              }}
-            >
-              Instruction Mode
-            </span>
-          )}
         </div>
       </div>
 
@@ -203,15 +184,7 @@ function ChatMode() {
       <div className="chat-messages">
         {messages.length === 0 && (
           <div className="text-center text-secondary p-4">
-            {isInstructionMode ? (
-              <p>
-                Send a message to configure {primaryAI.name}'s personality and instructions.
-                <br />
-                Example: "You are a helpful assistant that specializes in..."
-              </p>
-            ) : (
-              <p>Start the conversation by sending a message below.</p>
-            )}
+            <p>Start the conversation by sending a message below.</p>
           </div>
         )}
 

@@ -7,10 +7,19 @@ function CreateAIModal({ isOpen, onClose, onCreated }) {
   const [name, setName] = useState('');
   const [isPublic, setIsPublic] = useState(false);
   const [systemPrompt, setSystemPrompt] = useState('');
+  const [model, setModel] = useState('openai');
+  const [isPremium, setIsPremium] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
   const { currentUser } = useContext(AuthContext);
+
+  React.useEffect(() => {
+    if (!isOpen || !currentUser?.uid) return;
+    fetch(`${API_BASE}/api/v1/users/${currentUser.uid}`).then(async response => {
+      if (response.ok) setIsPremium(Boolean((await response.json()).user.is_premium));
+    });
+  }, [isOpen, currentUser]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -36,7 +45,8 @@ function CreateAIModal({ isOpen, onClose, onCreated }) {
           owner_id: currentUser.uid,
           name: name.trim(),
           is_public: isPublic,
-          system_prompt: systemPrompt.trim() || null,
+          persona: systemPrompt.trim(),
+          model,
         }),
       });
 
@@ -51,6 +61,7 @@ function CreateAIModal({ isOpen, onClose, onCreated }) {
       setName('');
       setIsPublic(false);
       setSystemPrompt('');
+      setModel('openai');
 
       // Notify parent
       if (onCreated) {
@@ -153,23 +164,33 @@ function CreateAIModal({ isOpen, onClose, onCreated }) {
             </label>
           </div>
 
-          {/* System Prompt */}
+          {isPremium && (
+            <div style={{ marginBottom: '1.25rem' }}>
+              <label htmlFor="model" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>Chat model</label>
+              <select id="model" value={model} onChange={(e) => setModel(e.target.value)} style={{ width: '100%', padding: '0.75rem', borderRadius: '8px' }}>
+                <option value="openai">OpenAI</option>
+                <option value="unstoppable">Unstoppable (Premium)</option>
+              </select>
+            </div>
+          )}
+
+          {/* Persona */}
           <div style={{ marginBottom: '1.5rem' }}>
             <label
-              htmlFor="system-prompt"
+              htmlFor="persona"
               style={{
                 display: 'block',
                 marginBottom: '0.5rem',
                 fontWeight: 500,
               }}
             >
-              System Prompt (optional)
+              Persona *
             </label>
             <textarea
-              id="system-prompt"
+              id="persona"
               value={systemPrompt}
               onChange={(e) => setSystemPrompt(e.target.value)}
-              placeholder="Define your AI's personality and behavior..."
+              placeholder="You are Ada, a warm and concise writing coach..."
               rows={4}
               style={{
                 width: '100%',
@@ -182,7 +203,7 @@ function CreateAIModal({ isOpen, onClose, onCreated }) {
               }}
             />
             <p style={{ fontSize: '0.85rem', color: '#666', marginTop: '0.5rem' }}>
-              This defines how your AI responds. You can update this later.
+              This is saved with your AI and used on every conversation.
             </p>
           </div>
 
