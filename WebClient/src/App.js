@@ -1,25 +1,16 @@
 import React, { useState, useMemo, useContext, useEffect, useCallback } from 'react';
 import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import './App.css';
-import Register from "./pages/Message/Register";
-import Login from "./pages/Message/Login";
-import MessagesHome from "./pages/Message/MessagesHome";
 import "./css/style.scss";
-import ChatHome from './pages/ChatHome';
-import HomePage from './pages/HomePage';
-import LoginPage from './pages/LoginPage';
 import MyAccount from './pages/MyAccount';
-import EditProfile from './pages/EditProfile';
-import Notifications from './pages/Notifications';
+import Login from './pages/Login';
 import Settings from './pages/Settings';
 import TopNavBar from './pages/TopNavBar';
 import CurrentAiContext from './components/CurrentAiContext';
-import ImageUploads from './pages/ImageUploads';
 import ImageMode from './pages/ImageMode';
 import ChatMode from './pages/ChatMode';
 import Sidebar from './components/Sidebar';
 import ChatInterface from './components/ChatInterface';
-import "@aws-amplify/ui-react/styles.css";
 import { AuthContext, AuthContextProvider } from './context/AuthContext';
 import { AppContextProvider, useAppContext, useSidebars, useAILists } from './context/AppContext';
 
@@ -147,7 +138,7 @@ function ProtectedRoute({ children }) {
   const { currentUser } = useContext(AuthContext);
 
   if (!currentUser) {
-    return <Navigate to="/login" />;
+    return <Navigate to="/login" replace />;
   }
 
   return children;
@@ -185,41 +176,11 @@ function AppContent({ signOut }) {
             }
           />
 
-          {/* Legacy routes */}
-          <Route
-            path="/feed"
-            element={
-              <ProtectedRoute>
-                <HomePage />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/chat"
-            element={
-              <ProtectedRoute>
-                <ChatHome />
-              </ProtectedRoute>
-            }
-          />
-
-          {/* Auth routes */}
           <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-
-          {/* Messages */}
-          <Route path="/messages" element={<MessagesHome />} />
 
           {/* User routes */}
-          <Route path="/notifications" element={<Notifications />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/myaccount" element={<MyAccount />} />
-          <Route path="/editprofile" element={<EditProfile />} />
-          <Route path="/imageuploads" element={<ImageUploads />} />
-
-          {/* Legacy login */}
-          <Route path="/loginpage" element={<LoginPage />} />
+          <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+          <Route path="/myaccount" element={<ProtectedRoute><MyAccount /></ProtectedRoute>} />
         </Routes>
       </Router>
     </CurrentAiContext.Provider>

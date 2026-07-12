@@ -5,13 +5,9 @@ import App from './App';
 import reportWebVitals from './reportWebVitals';
 // import { BrowserRouter } from 'react-router-dom';
 // import { Auth0Provider } from "@auth0/auth0-react";
-import { Amplify } from 'aws-amplify';
-import config from './aws-exports';
 import "./css/hashtag.css";
 import { AuthContextProvider } from './context/AuthContext';  
 import { ChatContextProvider } from './context/ChatContext';
-
-Amplify.configure(config);
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
