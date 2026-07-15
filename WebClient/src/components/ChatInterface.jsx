@@ -27,12 +27,12 @@ function ChatInterface() {
 
   // Get placeholder text based on context
   const getPlaceholder = () => {
-    if (!primaryAI) {
-      return 'Select an AI to start chatting...';
+    if (mode === 'image') {
+      return selectedAIs.length ? `Describe an image with ${selectedAIs.map((ai) => ai.name).join(', ')}...` : 'Select one or more characters to generate an image...';
     }
 
-    if (mode === 'image') {
-      return `Add tags to images with ${primaryAI.name}...`;
+    if (!primaryAI) {
+      return 'Select an AI to start chatting...';
     }
 
     if (isMultiAIChat) {
@@ -49,7 +49,7 @@ function ChatInterface() {
 
     if (!message.trim() || isLoading) return;
 
-    if (!primaryAI) {
+    if (mode !== 'image' && !primaryAI) {
       console.warn('No AI selected');
       return;
     }
@@ -57,7 +57,9 @@ function ChatInterface() {
     setIsLoading(true);
 
     try {
-      if (isMultiAIChat) {
+      if (mode === 'image') {
+        window.dispatchEvent(new CustomEvent('peoplewelcome-image-generate', { detail: { prompt: message } }));
+      } else if (isMultiAIChat) {
         // Multi-AI chat (to be implemented with SSE in Sprint 6)
         const response = await fetch(`${API_BASE}/api/v1/agent/chat`, {
           method: 'POST',
@@ -70,7 +72,7 @@ function ChatInterface() {
         });
         const data = await response.json();
         if (!response.ok) throw new Error(data.detail || 'Chat failed');
-        window.dispatchEvent(new CustomEvent('peoplewelcome-chat', { detail: data.messages }));
+        window.dispatchEvent(new CustomEvent('peoplewelcome-chat', { detail: data.truncated ? [...data.messages, { role: 'system', content: 'This response reached the model token limit and may be incomplete.' }] : data.messages }));
       } else {
         // Single AI chat
         const response = await fetch(`${API_BASE}/api/v1/agent/chat`, {
@@ -84,7 +86,7 @@ function ChatInterface() {
         });
         const data = await response.json();
         if (!response.ok) throw new Error(data.detail || 'Chat failed');
-        window.dispatchEvent(new CustomEvent('peoplewelcome-chat', { detail: data.messages }));
+        window.dispatchEvent(new CustomEvent('peoplewelcome-chat', { detail: data.truncated ? [...data.messages, { role: 'system', content: 'This response reached the model token limit and may be incomplete.' }] : data.messages }));
       }
 
       setMessage('');
@@ -93,7 +95,7 @@ function ChatInterface() {
     } finally {
       setIsLoading(false);
     }
-  }, [message, isLoading, primaryAI, isMultiAIChat, currentUser]);
+  }, [message, isLoading, mode, primaryAI, isMultiAIChat, currentUser]);
 
   // Handle keyboard shortcuts
   const handleKeyDown = (e) => {
@@ -153,12 +155,12 @@ function ChatInterface() {
           onChange={(e) => setMessage(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={getPlaceholder()}
-          disabled={isLoading || !primaryAI}
+          disabled={isLoading || (mode === 'image' ? !selectedAIs.length : !primaryAI)}
         />
         <button
           type="submit"
           className="chat-interface__send-btn"
-          disabled={isLoading || !message.trim() || !primaryAI}
+          disabled={isLoading || !message.trim() || (mode === 'image' ? !selectedAIs.length : !primaryAI)}
         >
           {isLoading ? '...' : 'Send'}
         </button>

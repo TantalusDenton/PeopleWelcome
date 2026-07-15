@@ -8,6 +8,8 @@ function CreateAIModal({ isOpen, onClose, onCreated }) {
   const [isPublic, setIsPublic] = useState(false);
   const [systemPrompt, setSystemPrompt] = useState('');
   const [model, setModel] = useState('openai');
+  const [avatar, setAvatar] = useState(null);
+  const [generationStatus, setGenerationStatus] = useState('');
   const [isPremium, setIsPremium] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -38,16 +40,16 @@ function CreateAIModal({ isOpen, onClose, onCreated }) {
     setError('');
 
     try {
+      const formData = new FormData();
+      formData.append('owner_id', currentUser.uid);
+      formData.append('name', name.trim());
+      formData.append('is_public', isPublic);
+      formData.append('persona', systemPrompt.trim());
+      formData.append('model', model);
+      if (avatar) formData.append('avatar', avatar);
       const response = await fetch(`${API_BASE}/api/v1/ais`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          owner_id: currentUser.uid,
-          name: name.trim(),
-          is_public: isPublic,
-          persona: systemPrompt.trim(),
-          model,
-        }),
+        body: formData,
       });
 
       if (!response.ok) {
@@ -62,6 +64,8 @@ function CreateAIModal({ isOpen, onClose, onCreated }) {
       setIsPublic(false);
       setSystemPrompt('');
       setModel('openai');
+      setAvatar(null);
+      setGenerationStatus(data.ai.image_generation_status);
 
       // Notify parent
       if (onCreated) {
@@ -174,6 +178,12 @@ function CreateAIModal({ isOpen, onClose, onCreated }) {
             </div>
           )}
 
+          <div style={{ marginBottom: '1.25rem' }}>
+            <label htmlFor="avatar" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>Avatar reference image</label>
+            <input id="avatar" type="file" accept="image/*" onChange={(e) => setAvatar(e.target.files?.[0] || null)} />
+            <p style={{ fontSize: '0.85rem', color: '#666', marginTop: '0.5rem' }}>Upload a clear face image to generate five consistent character views.</p>
+          </div>
+
           {/* Persona */}
           <div style={{ marginBottom: '1.5rem' }}>
             <label
@@ -222,6 +232,7 @@ function CreateAIModal({ isOpen, onClose, onCreated }) {
               {error}
             </div>
           )}
+          {generationStatus && <p role="status" style={{ color: '#2563eb' }}>Character created. Image generation is {generationStatus}.</p>}
 
           {/* Buttons */}
           <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>

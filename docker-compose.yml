@@ -10,6 +10,11 @@ services:
       OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
       UNSTOPPABLE_LLM_URL: ${UNSTOPPABLE_LLM_URL:-}
       UNSTOPPABLE_LLM_API_KEY: ${UNSTOPPABLE_LLM_API_KEY:-}
+      UNSTOPPABLE_MAX_TOKENS: ${UNSTOPPABLE_MAX_TOKENS:-2048}
+      UNSTOPPABLE_TIMEOUT_SECONDS: ${UNSTOPPABLE_TIMEOUT_SECONDS:-300}
+      UNSTOPPABLE_HISTORY_MAX_CHARS: ${UNSTOPPABLE_HISTORY_MAX_CHARS:-32000}
+      IMAGE_GENERATOR_URL: http://image-generator:8001
+      MEDIA_ROOT: /data/media
     volumes:
       - peoplewelcome-data:/data
     ports:
@@ -24,5 +29,18 @@ services:
       - scheduler
     ports:
       - "13000:80"
+  image-generator:
+    build:
+      context: .
+      dockerfile: ImageGenerator/Dockerfile
+    environment:
+      DIFFUSERS_MODEL_ID: ${DIFFUSERS_MODEL_ID:-stable-diffusion-v1-5/stable-diffusion-v1-5}
+      IMAGE_GENERATION_SIZE: ${IMAGE_GENERATION_SIZE:-512}
+      HF_HOME: /data/huggingface
+      HF_TOKEN: ${HF_TOKEN:-}
+    volumes:
+      - peoplewelcome-data:/data
+    gpus: all
+    restart: unless-stopped
 volumes:
   peoplewelcome-data:
