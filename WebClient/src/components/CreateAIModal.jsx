@@ -14,14 +14,14 @@ function CreateAIModal({ isOpen, onClose, onCreated }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  const { currentUser } = useContext(AuthContext);
+  const { currentUser, authorizedFetch } = useContext(AuthContext);
 
   React.useEffect(() => {
     if (!isOpen || !currentUser?.uid) return;
-    fetch(`${API_BASE}/api/v1/users/${currentUser.uid}`).then(async response => {
+    authorizedFetch(`${API_BASE}/api/v1/me`).then(async response => {
       if (response.ok) setIsPremium(Boolean((await response.json()).user.is_premium));
     });
-  }, [isOpen, currentUser]);
+  }, [isOpen, currentUser, authorizedFetch]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -41,13 +41,12 @@ function CreateAIModal({ isOpen, onClose, onCreated }) {
 
     try {
       const formData = new FormData();
-      formData.append('owner_id', currentUser.uid);
       formData.append('name', name.trim());
       formData.append('is_public', isPublic);
       formData.append('persona', systemPrompt.trim());
       formData.append('model', model);
       if (avatar) formData.append('avatar', avatar);
-      const response = await fetch(`${API_BASE}/api/v1/ais`, {
+      const response = await authorizedFetch(`${API_BASE}/api/v1/ais`, {
         method: 'POST',
         body: formData,
       });
@@ -200,6 +199,7 @@ function CreateAIModal({ isOpen, onClose, onCreated }) {
               id="persona"
               value={systemPrompt}
               onChange={(e) => setSystemPrompt(e.target.value)}
+              required
               placeholder="You are Ada, a warm and concise writing coach..."
               rows={4}
               style={{

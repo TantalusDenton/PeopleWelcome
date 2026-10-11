@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useContext } from 'react';
-import { useAppContext, useSidebars, useSelectedAIs } from '../context/AppContext';
+import { useAppContext, useSidebars } from '../context/AppContext';
 import { AuthContext } from '../context/AuthContext';
 
 const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:8000';
@@ -10,7 +10,7 @@ function ChatInterface() {
   const [feedback, setFeedback] = useState(null); // For showing success/error messages
   const { leftSidebarOpen, rightSidebarOpen, isMobile } = useSidebars();
   const { mode, primaryAI, isMultiAIChat, selectedAIs } = useAppContext();
-  const { currentUser } = useContext(AuthContext);
+  const { authorizedFetch } = useContext(AuthContext);
 
   // Clear feedback after 3 seconds
   const showFeedback = (type, text) => {
@@ -61,11 +61,10 @@ function ChatInterface() {
         window.dispatchEvent(new CustomEvent('peoplewelcome-image-generate', { detail: { prompt: message } }));
       } else if (isMultiAIChat) {
         // Multi-AI chat (to be implemented with SSE in Sprint 6)
-        const response = await fetch(`${API_BASE}/api/v1/agent/chat`, {
+        const response = await authorizedFetch(`${API_BASE}/api/v1/agent/chat`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            user_id: currentUser?.uid || 'anonymous',
             ai_id: primaryAI.id,
             message: message,
           }),
@@ -75,11 +74,10 @@ function ChatInterface() {
         window.dispatchEvent(new CustomEvent('peoplewelcome-chat', { detail: data.truncated ? [...data.messages, { role: 'system', content: 'This response reached the model token limit and may be incomplete.' }] : data.messages }));
       } else {
         // Single AI chat
-        const response = await fetch(`${API_BASE}/api/v1/agent/chat`, {
+        const response = await authorizedFetch(`${API_BASE}/api/v1/agent/chat`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            user_id: currentUser?.uid || 'anonymous',
             ai_id: primaryAI.id,
             message: message,
           }),
@@ -95,7 +93,7 @@ function ChatInterface() {
     } finally {
       setIsLoading(false);
     }
-  }, [message, isLoading, mode, primaryAI, isMultiAIChat, currentUser]);
+  }, [message, isLoading, mode, primaryAI, isMultiAIChat, authorizedFetch]);
 
   // Handle keyboard shortcuts
   const handleKeyDown = (e) => {

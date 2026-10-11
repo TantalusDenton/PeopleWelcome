@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { useSelectedAIs, useAppContext, useAILists } from '../context/AppContext';
+import { useSelectedAIs, useAILists } from '../context/AppContext';
 import CreateAIModal from './CreateAIModal';
+import { AuthContext } from '../context/AuthContext';
 
 function AICard({ ai, isOwned = false, onRetryImages }) {
-  const { selectedAIs, selectAI, deselectAI, setPrimaryAI, setSecondaryAI } = useSelectedAIs();
+  const { selectedAIs, deselectAI, setPrimaryAI, setSecondaryAI } = useSelectedAIs();
 
   // Check if this AI is selected and what type
   const selectedAI = selectedAIs.find(a => a.id === ai.id);
@@ -97,7 +98,7 @@ function Sidebar({
   isMobile = false,
   showCreateButton = false,
 }) {
-  const { currentUser } = useAppContext();
+  const { currentUser, authorizedFetch } = React.useContext(AuthContext);
   const { setOwnedAIs, ownedAIs } = useAILists();
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -117,7 +118,7 @@ function Sidebar({
   };
 
   const retryImages = async (aiId) => {
-    const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/api/v1/ais/${aiId}/images/regenerate`, { method: 'POST' });
+    const response = await authorizedFetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/api/v1/ais/${aiId}/images/regenerate`, { method: 'POST' });
     if (!response.ok) return;
     const { ai } = await response.json();
     setOwnedAIs(ownedAIs.map((item) => item.id === aiId ? { ...ai, isOwned: true } : item));
@@ -128,14 +129,14 @@ function Sidebar({
     const poll = async () => {
       const updated = await Promise.all(ownedAIs.map(async (ai) => {
         if (!['pending', 'generating'].includes(ai.image_generation_status)) return ai;
-        const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/api/v1/ais/${ai.id}`);
+        const response = await authorizedFetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/api/v1/ais/${ai.id}`);
         return response.ok ? { ...(await response.json()).ai, isOwned: true } : ai;
       }));
       setOwnedAIs(updated);
     };
     const timer = window.setInterval(() => { poll().catch(() => {}); }, 4000);
     return () => window.clearInterval(timer);
-  }, [position, ownedAIs, setOwnedAIs]);
+  }, [position, ownedAIs, setOwnedAIs, authorizedFetch]);
 
   return (
     <>

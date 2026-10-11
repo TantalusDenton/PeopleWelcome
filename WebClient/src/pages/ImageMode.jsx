@@ -1,10 +1,12 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useAppContext } from '../context/AppContext';
+import { AuthContext } from '../context/AuthContext';
 
 const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
 function ImageMode() {
   const { selectedAIs } = useAppContext();
+  const { authorizedFetch } = React.useContext(AuthContext);
   const [imageUrl, setImageUrl] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState('');
@@ -15,7 +17,7 @@ function ImageMode() {
     setIsGenerating(true);
     setError('');
     try {
-      const response = await fetch(`${API_BASE}/api/v1/images/generate`, {
+      const response = await authorizedFetch(`${API_BASE}/api/v1/images/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ai_ids: selectedAIs.map((ai) => ai.id), prompt: userPrompt }),
@@ -28,12 +30,12 @@ function ImageMode() {
     } finally {
       setIsGenerating(false);
     }
-  }, [selectedAIs]);
+  }, [selectedAIs, authorizedFetch]);
 
   useEffect(() => {
     if (selectedAIs.length) generate();
     else { setImageUrl(''); setError(''); }
-  }, [selectedIds]); // Generate a fresh system-directed scene when selection changes.
+  }, [selectedIds, selectedAIs.length, generate]); // Generate a fresh system-directed scene when selection changes.
 
   useEffect(() => {
     const handlePrompt = (event) => generate(event.detail.prompt);
