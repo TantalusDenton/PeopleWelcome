@@ -3,4 +3,8 @@ App-logic/local_storage/
 App-logic/sslcert/
 *.db
 App-logic/node_modules/
+**/node_modules/
+**/build/
+**/__pycache__/
 .env
+infra/aws/.local/

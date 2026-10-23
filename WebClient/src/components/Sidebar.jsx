@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
-import { useSelectedAIs, useAppContext, useAILists } from '../context/AppContext';
+import React, { useEffect, useState } from 'react';
+import { useSelectedAIs, useAILists } from '../context/AppContext';
 import CreateAIModal from './CreateAIModal';
+import { AuthContext } from '../context/AuthContext';
 
-function AICard({ ai, isOwned = false }) {
-  const { selectedAIs, selectAI, deselectAI, setPrimaryAI, setSecondaryAI } = useSelectedAIs();
+function AICard({ ai, isOwned = false, onRetryImages }) {
+  const { selectedAIs, deselectAI, setPrimaryAI, setSecondaryAI } = useSelectedAIs();
 
   // Check if this AI is selected and what type
   const selectedAI = selectedAIs.find(a => a.id === ai.id);
@@ -59,12 +60,18 @@ function AICard({ ai, isOwned = false }) {
       onKeyPress={(e) => e.key === 'Enter' && handleClick(e)}
     >
       <div className="ai-card__avatar">
-        {getInitials(ai.name)}
+        {ai.profile_image_url ? <img src={`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}${ai.profile_image_url}`} alt={`${ai.name} profile`} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} /> : getInitials(ai.name)}
       </div>
       <div className="ai-card__info">
         <div className="ai-card__name">{ai.name}</div>
         {ai.owner_username && (
           <div className="ai-card__owner">@{ai.owner_username}</div>
+        )}
+        {ai.image_generation_status && ai.image_generation_status !== 'ready' && ai.image_generation_status !== 'not_requested' && (
+          <div className="ai-card__owner">Images: {ai.image_generation_status}</div>
+        )}
+        {ai.image_generation_status === 'failed' && ai.image_generation_error && (
+          <div className="ai-card__owner" title={ai.image_generation_error}>Generation failed: {ai.image_generation_error}</div>
         )}
       </div>
       {isSelected && (
@@ -74,6 +81,9 @@ function AICard({ ai, isOwned = false }) {
             background: selectionType === 'primary' ? '#3b82f6' : '#ef4444'
           }}
         />
+      )}
+      {isOwned && ai.image_generation_status === 'failed' && onRetryImages && (
+        <button type="button" onClick={(event) => { event.stopPropagation(); onRetryImages(ai.id); }}>Retry images</button>
       )}
     </div>
   );
@@ -88,7 +98,7 @@ function Sidebar({
   isMobile = false,
   showCreateButton = false,
 }) {
-  const { currentUser } = useAppContext();
+  const { currentUser, authorizedFetch } = React.useContext(AuthContext);
   const { setOwnedAIs, ownedAIs } = useAILists();
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -106,6 +116,27 @@ function Sidebar({
     // Add the new AI to the owned AIs list
     setOwnedAIs([{ ...newAI, isOwned: true }, ...ownedAIs]);
   };
+
+  const retryImages = async (aiId) => {
+    const response = await authorizedFetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/api/v1/ais/${aiId}/images/regenerate`, { method: 'POST' });
+    if (!response.ok) return;
+    const { ai } = await response.json();
+    setOwnedAIs(ownedAIs.map((item) => item.id === aiId ? { ...ai, isOwned: true } : item));
+  };
+
+  useEffect(() => {
+    if (position !== 'right' || !ownedAIs.some(ai => ['pending', 'generating'].includes(ai.image_generation_status))) return undefined;
+    const poll = async () => {
+      const updated = await Promise.all(ownedAIs.map(async (ai) => {
+        if (!['pending', 'generating'].includes(ai.image_generation_status)) return ai;
+        const response = await authorizedFetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/api/v1/ais/${ai.id}`);
+        return response.ok ? { ...(await response.json()).ai, isOwned: true } : ai;
+      }));
+      setOwnedAIs(updated);
+    };
+    const timer = window.setInterval(() => { poll().catch(() => {}); }, 4000);
+    return () => window.clearInterval(timer);
+  }, [position, ownedAIs, setOwnedAIs, authorizedFetch]);
 
   return (
     <>
@@ -138,6 +169,7 @@ function Sidebar({
                 key={ai.id}
                 ai={ai}
                 isOwned={position === 'right' || ai.owner_id === currentUser?.uid}
+                onRetryImages={position === 'right' ? retryImages : undefined}
               />
             ))
           )}

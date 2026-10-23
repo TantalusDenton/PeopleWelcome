@@ -6,18 +6,15 @@ import reportWebVitals from './reportWebVitals';
 // import { BrowserRouter } from 'react-router-dom';
 // import { Auth0Provider } from "@auth0/auth0-react";
 import "./css/hashtag.css";
-import { AuthContextProvider } from './context/AuthContext';  
 import { ChatContextProvider } from './context/ChatContext';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
-  <AuthContextProvider>
-    <ChatContextProvider>
-      <React.StrictMode>
-        <App />
-      </React.StrictMode>
-    </ChatContextProvider>
-  </AuthContextProvider>
+  <ChatContextProvider>
+    <React.StrictMode>
+      <App />
+    </React.StrictMode>
+  </ChatContextProvider>
 );
 
 // If you want to start measuring performance in your app, pass a function

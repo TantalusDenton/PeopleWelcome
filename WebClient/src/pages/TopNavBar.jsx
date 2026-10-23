@@ -1,7 +1,7 @@
 import React, { useContext } from 'react';
 import { Link } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import { useAppContext, useSidebars, useMode } from '../context/AppContext';
+import { useSidebars, useMode } from '../context/AppContext';
 import logo from '../images/peoplewelcomelogo3.png';
 import "../components/Notifications/navbar.css";
 
@@ -85,7 +85,7 @@ function TopNavBar() {
 
       {/* Center section - Mode toggle */}
       <div className="topnav__center">
-        <ModeToggle />
+        {currentUser && <ModeToggle />}
       </div>
 
       {/* Right section */}
@@ -99,19 +99,21 @@ function TopNavBar() {
         {currentUser && <Link to="/settings" className="topnav__settings-link">Settings</Link>}
 
         {/* Logout button */}
-        <button
-          className="topnav__logout-btn"
-          onClick={onClickLogout}
-          style={{
-            background: 'none',
-            border: '1px solid #e6e6e6',
-            padding: '0.5rem 1rem',
-            borderRadius: '8px',
-            cursor: 'pointer',
-          }}
-        >
-          Logout
-        </button>
+        {currentUser && (
+          <button
+            className="topnav__logout-btn"
+            onClick={onClickLogout}
+            style={{
+              background: 'none',
+              border: '1px solid #e6e6e6',
+              padding: '0.5rem 1rem',
+              borderRadius: '8px',
+              cursor: 'pointer',
+            }}
+          >
+            Logout
+          </button>
+        )}
 
         {/* Mobile: Right sidebar toggle */}
         {isMobile && (

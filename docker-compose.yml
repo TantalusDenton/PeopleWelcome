@@ -1,28 +1,91 @@
 services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: peoplewelcome
+      POSTGRES_USER: peoplewelcome
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-peoplewelcome-local}
+    volumes:
+      - peoplewelcome-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U peoplewelcome -d peoplewelcome"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
   scheduler:
     build:
       context: .
       dockerfile: Scheduler/Dockerfile
     environment:
-      DATABASE_PATH: /data/peoplewelcome.db
+      DATABASE_URL: postgresql://peoplewelcome:${POSTGRES_PASSWORD:-peoplewelcome-local}@postgres:5432/peoplewelcome
+      SQLITE_MIGRATION_PATH: /data/peoplewelcome.db
       CORS_ORIGINS: http://localhost:13000
+      APP_BASE_URL: http://localhost:13000
+      LEGACY_IMPORT_ENABLED: ${LEGACY_IMPORT_ENABLED:-true}
+      LEGACY_OWNER_IDS: ${LEGACY_OWNER_IDS:-demo-user,local-user}
+      PEOPLEWELCOME_ADMIN_EMAILS: ${PEOPLEWELCOME_ADMIN_EMAILS:-}
+      ZITADEL_ISSUER: ${ZITADEL_ISSUER:-}
+      ZITADEL_INTROSPECTION_CLIENT_ID: ${ZITADEL_INTROSPECTION_CLIENT_ID:-}
+      ZITADEL_INTROSPECTION_CLIENT_SECRET: ${ZITADEL_INTROSPECTION_CLIENT_SECRET:-}
+      ZITADEL_AUDIENCE: ${ZITADEL_AUDIENCE:-}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+      STRIPE_PREMIUM_PRICE_ID: ${STRIPE_PREMIUM_PRICE_ID:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
       UNSTOPPABLE_LLM_URL: ${UNSTOPPABLE_LLM_URL:-}
       UNSTOPPABLE_LLM_API_KEY: ${UNSTOPPABLE_LLM_API_KEY:-}
+      UNSTOPPABLE_MAX_TOKENS: ${UNSTOPPABLE_MAX_TOKENS:-2048}
+      UNSTOPPABLE_TIMEOUT_SECONDS: ${UNSTOPPABLE_TIMEOUT_SECONDS:-300}
+      UNSTOPPABLE_HISTORY_MAX_CHARS: ${UNSTOPPABLE_HISTORY_MAX_CHARS:-32000}
+      IMAGE_GENERATOR_URL: http://image-generator:8001
+      IMAGE_GENERATION_TIMEOUT: ${IMAGE_GENERATION_TIMEOUT:-1200}
+      MEDIA_ROOT: /data/media
     volumes:
       - peoplewelcome-data:/data
+    depends_on:
+      postgres:
+        condition: service_healthy
     ports:
       - "18000:8000"
+
   web:
     build:
       context: .
       dockerfile: WebClient/Dockerfile
       args:
         REACT_APP_API_URL: http://localhost:18000
+        REACT_APP_ZITADEL_AUTHORITY: ${ZITADEL_ISSUER:-}
+        REACT_APP_ZITADEL_CLIENT_ID: ${ZITADEL_FRONTEND_CLIENT_ID:-}
+        REACT_APP_ZITADEL_PROJECT_ID: ${ZITADEL_PROJECT_ID:-}
     depends_on:
       - scheduler
     ports:
       - "13000:80"
+
+  image-generator:
+    build:
+      context: .
+      dockerfile: ImageGenerator/Dockerfile
+    environment:
+      DIFFUSERS_MODEL_ID: ${DIFFUSERS_MODEL_ID:-stable-diffusion-v1-5/stable-diffusion-v1-5}
+      CONTROLNET_MODEL_ID: ${CONTROLNET_MODEL_ID:-lllyasviel/control_v11p_sd15_openpose}
+      IMAGE_GENERATION_SIZE: ${IMAGE_GENERATION_SIZE:-512}
+      CHARACTER_VIEW_WIDTH: ${CHARACTER_VIEW_WIDTH:-512}
+      CHARACTER_VIEW_HEIGHT: ${CHARACTER_VIEW_HEIGHT:-768}
+      SCENE_IMAGE_WIDTH: ${SCENE_IMAGE_WIDTH:-768}
+      SCENE_IMAGE_HEIGHT: ${SCENE_IMAGE_HEIGHT:-512}
+      IMAGE_INFERENCE_STEPS: ${IMAGE_INFERENCE_STEPS:-18}
+      MINIMUM_FREE_VRAM_MIB: ${MINIMUM_FREE_VRAM_MIB:-1800}
+      HF_HOME: /data/huggingface
+      HF_TOKEN: ${HF_TOKEN:-}
+    volumes:
+      - peoplewelcome-data:/data
+    gpus: all
+    restart: unless-stopped
+
 volumes:
   peoplewelcome-data:
+  peoplewelcome-postgres:

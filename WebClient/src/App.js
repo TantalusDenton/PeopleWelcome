@@ -27,9 +27,8 @@ function MainLayout({ children }) {
     toggleRightSidebar,
   } = useSidebars();
 
-  const { mode } = useAppContext();
   const { publicAIs, ownedAIs, setPublicAIs, setOwnedAIs, setLoading } = useAILists();
-  const { currentUser } = useContext(AuthContext);
+  const { currentUser, authorizedFetch } = useContext(AuthContext);
 
   // Fetch AI lists when user is authenticated
   const fetchAIs = useCallback(async () => {
@@ -40,8 +39,8 @@ function MainLayout({ children }) {
     try {
       // Fetch public AIs and owned AIs in parallel
       const [publicResponse, ownedResponse] = await Promise.all([
-        fetch(`${API_BASE}/api/v1/ais/public`),
-        fetch(`${API_BASE}/api/v1/ais/owner/${currentUser.uid}`)
+        authorizedFetch(`${API_BASE}/api/v1/ais/public`),
+        authorizedFetch(`${API_BASE}/api/v1/ais/mine`)
       ]);
 
       if (publicResponse.ok) {
@@ -68,7 +67,7 @@ function MainLayout({ children }) {
     } finally {
       setLoading({ publicAIs: false, ownedAIs: false });
     }
-  }, [currentUser, setPublicAIs, setOwnedAIs, setLoading]);
+  }, [currentUser, authorizedFetch, setPublicAIs, setOwnedAIs, setLoading]);
 
   // Fetch AIs when user logs in
   useEffect(() => {
@@ -135,10 +134,14 @@ function MainLayout({ children }) {
 
 // Protected Route wrapper
 function ProtectedRoute({ children }) {
-  const { currentUser } = useContext(AuthContext);
+  const { currentUser, isLoading } = useContext(AuthContext);
+
+  if (isLoading) {
+    return <main className="formContainer"><div className="formWrapper">Loading your account...</div></main>;
+  }
 
   if (!currentUser) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/login" state={{ from: window.location.pathname }} replace />;
   }
 
   return children;
@@ -177,6 +180,7 @@ function AppContent({ signOut }) {
           />
 
           <Route path="/login" element={<Login />} />
+          <Route path="/auth/callback" element={<Login />} />
 
           {/* User routes */}
           <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />

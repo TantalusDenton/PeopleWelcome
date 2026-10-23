@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef, useContext, useCallback } from 'react';
-import { useAppContext, useSelectedAIs } from '../context/AppContext';
+import React, { useState, useEffect, useRef, useContext } from 'react';
+import { useAppContext } from '../context/AppContext';
 import { AuthContext } from '../context/AuthContext';
 
 const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:8000';
@@ -14,7 +14,6 @@ const AI_COLORS = [
 
 function ChatMode() {
   const [messages, setMessages] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef(null);
 
   const {
@@ -23,7 +22,7 @@ function ChatMode() {
     isMultiAIChat,
     hasSelection,
   } = useAppContext();
-  const { currentUser } = useContext(AuthContext);
+  const { currentUser, authorizedFetch } = useContext(AuthContext);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -33,31 +32,23 @@ function ChatMode() {
   // Load conversation history when AI changes
   useEffect(() => {
     if (primaryAI && currentUser) {
-      loadConversationHistory();
+      authorizedFetch(`${API_BASE}/api/v1/conversations/${primaryAI.id}`)
+        .then(async (response) => {
+          const data = await response.json();
+          if (!response.ok) throw new Error(data.detail || 'Could not load conversation history');
+          setMessages(data.messages || []);
+        })
+        .catch((error) => console.error('Error loading conversation history:', error));
     } else {
       setMessages([]);
     }
-  }, [primaryAI?.id, currentUser?.uid]);
+  }, [primaryAI, currentUser, authorizedFetch]);
 
   useEffect(() => {
     const appendMessages = (event) => setMessages(previous => [...previous, ...event.detail]);
     window.addEventListener('peoplewelcome-chat', appendMessages);
     return () => window.removeEventListener('peoplewelcome-chat', appendMessages);
   }, []);
-
-  const loadConversationHistory = async () => {
-    if (!primaryAI || !currentUser) return;
-
-    try {
-      const response = await fetch(
-        `${API_BASE}/api/v1/conversations/${primaryAI.id}/${currentUser.uid}`
-      );
-      const data = await response.json();
-      setMessages(data.messages || []);
-    } catch (error) {
-      console.error('Error loading conversation history:', error);
-    }
-  };
 
   // This will be called by ChatInterface when sending messages
   // For now, we'll listen for messages through a custom event or context
@@ -232,19 +223,6 @@ function ChatMode() {
             </div>
           );
         })}
-
-        {/* Loading indicator */}
-        {isLoading && (
-          <div className="chat-message chat-message--assistant">
-            <div className="chat-message__content">
-              <span className="loading-dots">
-                <span>.</span>
-                <span>.</span>
-                <span>.</span>
-              </span>
-            </div>
-          </div>
-        )}
 
         {/* Scroll anchor */}
         <div ref={messagesEndRef} />
