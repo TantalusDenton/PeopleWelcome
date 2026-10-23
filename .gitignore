@@ -7,3 +7,4 @@ App-logic/node_modules/
 **/build/
 **/__pycache__/
 .env
+infra/aws/.local/
